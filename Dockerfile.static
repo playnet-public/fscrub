@@ -1,0 +1,9 @@
+FROM alpine:3.6
+
+LABEL maintainer "PlayNet <contact@play-net.org>"
+LABEL type "public"
+LABEL versioning "simple"
+
+ADD ./build/ /
+
+CMD ["/template"]
