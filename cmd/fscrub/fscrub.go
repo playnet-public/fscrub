@@ -9,12 +9,13 @@ import (
 	"syscall"
 
 	"github.com/playnet-public/fscrub/pkg/fscrawl"
+	"github.com/playnet-public/fscrub/pkg/fshandle"
+	"github.com/playnet-public/fscrub/pkg/fslog"
 
 	raven "github.com/getsentry/raven-go"
 	"github.com/golang/glog"
 	"github.com/kolide/kit/version"
 	"github.com/pkg/errors"
-	"github.com/playnet-public/fscrub/pkg/fscrub"
 	"github.com/playnet-public/fscrub/pkg/model"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -30,10 +31,13 @@ var (
 	sentryDsn   = flag.String("sentrydsn", "", "sentry dsn key")
 	dbgPtr      = flag.Bool("debug", false, "debug printing")
 	versionPtr  = flag.Bool("version", true, "show or hide version info")
-	sentry      *raven.Client
+
+	dirs   model.Directories
+	sentry *raven.Client
 )
 
 func main() {
+	flag.Var(&dirs, "dir", "directories to scrub")
 	flag.Parse()
 
 	if *versionPtr {
@@ -95,26 +99,23 @@ func main() {
 }
 
 func do(log *zap.Logger) error {
-
-	dirs := []model.Directory{
-		"test",
-	}
+	logAction := fslog.NewFsLogger(log)
 
 	actions := []model.Action{
-		model.NoOpAction,
+		logAction.Log,
 	}
 
-	crawler := fscrawl.NewCrawler(log)
+	crawler := fscrawl.NewCrawler(log, actions...)
 
-	fscrub := fscrub.NewFscrub(
+	fshandle := fshandle.NewFsHandler(
 		dirs,
-		nil,
-		crawler.Run,
-		actions,
+		[]model.Handler{
+			crawler,
+		},
 		log,
 	)
 
-	err := fscrub.Run()
+	err := fshandle.Run()
 	if err != nil {
 		return errors.Wrap(err, "running fscrub failed")
 	}

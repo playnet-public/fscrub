@@ -39,6 +39,11 @@ Install all further requirements by running `make deps`
 fscrub -watch -crawl -dir=/var/www/attachments -bckdir=/var/www/backups/fscrub -patterns=/var/opt/fscrub/patterns.json
 ```
 
+It is possible to provide multiple dirs to handle. To do so, simply use the `-dir` parameter multiple times:
+```
+fscrub -dir=./pkg -dir=./cmd
+```
+
 ## Development
 
 This project is using a [basic template](github.com/playnet-public/gocmd-template) for developing PlayNet command-line tools. Refer to this template for further information and usage docs.
