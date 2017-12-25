@@ -1,4 +1,6 @@
 # fscrub
+[![Go Report Card](https://goreportcard.com/badge/github.com/playnet-public/fscrub)](https://goreportcard.com/report/github.com/playnet-public/fscrub)
+
 Tool watching and crawling the file-system for files containing sensitive information to clean them.
 
 ## Description
@@ -22,8 +24,6 @@ The actions fscrub is planed to take are:
 * moving found files to a safe backup location
 * notifying a pool of users on certain events
 
-
-[![Go Report Card](https://goreportcard.com/badge/github.com/playnet-public/fscrub)](https://goreportcard.com/report/github.com/playnet-public/fscrub)
 
 ## Dependencies
 
