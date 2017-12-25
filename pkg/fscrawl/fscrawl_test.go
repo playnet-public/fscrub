@@ -1,7 +1,10 @@
 package fscrawl
 
 import (
+	"errors"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/playnet-public/fscrub/pkg/model"
 	"go.uber.org/zap"
@@ -50,14 +53,26 @@ func TestCrawler_Run(t *testing.T) {
 	}{
 		{
 			"basic",
-			&Crawler{log},
-			"test",
+			NewCrawler(log, model.NoOpAction),
+			".",
 			false,
 		},
 		{
-			"invalid path",
-			&Crawler{log},
+			"invalidPath",
+			NewCrawler(log, model.NoOpAction),
 			"",
+			true,
+		},
+		{
+			"brokenPath",
+			NewCrawler(log, model.NoOpAction),
+			"somepath",
+			true,
+		},
+		{
+			"actionError",
+			NewCrawler(log, errorAction),
+			".",
 			true,
 		},
 	}
@@ -69,6 +84,19 @@ func TestCrawler_Run(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Crawler.Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			tt.c.Stop()
+			select {
+			case err := <-erc:
+				if err != nil {
+					t.Errorf("NoOpHandler.Run() = %v, want %v", err, nil)
+				}
+			case <-time.After(time.Millisecond * 15):
+				return
+			}
 		})
 	}
+}
+
+func errorAction(path string, file os.FileInfo) error {
+	return errors.New("testError")
 }
