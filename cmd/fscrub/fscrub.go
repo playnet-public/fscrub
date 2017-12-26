@@ -50,11 +50,17 @@ func main() {
 	defer glog.Flush()
 	glog.CopyStandardLogTo("info")
 
+	var zapFields []zapcore.Field
+	// hide app and version information when debugging
+	if !*dbgPtr {
+		zapFields = []zapcore.Field{
+			zap.String("app", appKey),
+			zap.String("version", version.Version().Version),
+		}
+	}
+
 	// prepare zap logging
-	log := newLogger(*dbgPtr).With(
-		zap.String("app", appKey),
-		zap.String("version", version.Version().Version),
-	)
+	log := newLogger(*dbgPtr).With(zapFields...)
 	defer log.Sync()
 	log.Info("preparing")
 
