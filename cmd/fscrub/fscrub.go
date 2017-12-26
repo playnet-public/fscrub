@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/playnet-public/fscrub/pkg/fscrub"
+
 	"github.com/playnet-public/fscrub/pkg/fscrawl"
 	"github.com/playnet-public/fscrub/pkg/fshandle"
 	"github.com/playnet-public/fscrub/pkg/fslog"
@@ -106,9 +108,11 @@ func main() {
 
 func do(log *zap.Logger) error {
 	logAction := fslog.NewFsLogger(log)
+	fscrubAction := fscrub.NewFscrub(log)
 
 	actions := []model.Action{
 		logAction.Log,
+		fscrubAction.Handle,
 	}
 
 	crawler := fscrawl.NewCrawler(log, actions...)
