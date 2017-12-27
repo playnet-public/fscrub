@@ -1,13 +1,17 @@
 package fscrub
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/playnet-public/fscrub/pkg/primitives"
 	"go.uber.org/zap"
 )
 
@@ -41,6 +45,12 @@ func TestNewFscrub(t *testing.T) {
 // TODO: Fix coverage for file tests
 func TestFscrub_Handle(t *testing.T) {
 	log := zap.NewNop()
+	patterns := []Pattern{
+		{pTypes.String, "foo", "bar"},
+	}
+	errPatterns := []Pattern{
+		{pTypes.Regex, "foo", "bar"},
+	}
 	type args struct {
 		path     string
 		fileInfo os.FileInfo
@@ -48,43 +58,142 @@ func TestFscrub_Handle(t *testing.T) {
 	tests := []struct {
 		name    string
 		f       *Fscrub
+		content string
 		args    args
 		wantErr bool
 	}{
 		{
 			"basic",
-			&Fscrub{log: log, fileOpener: mockOpenFile("testdata.txt", "ABC\nDEF\nGHI\n")},
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("testdata.txt"),
+				fileUpdater: FileUpdater(NewFscrub(log, false)),
+			},
+			"ABC\nDEF\nGHI\n",
 			args{"testdata.txt", newMockFileInfo(false)},
 			false,
 		},
 		{
+			"basicReplace",
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("testdata.txt"),
+				fileUpdater: mockUpdateFile,
+				patterns:    patterns,
+			},
+			"foo\nbar\nfoo\n",
+			args{"testdata.txt", newMockFileInfo(false)},
+			false,
+		},
+		{
+			"basicSkip",
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("testdata.txt"),
+				fileUpdater: mockUpdateFile,
+				patterns:    patterns,
+			},
+			"//-ignore: github.com/playnet-public/fscrub",
+			args{"testdata.txt", newMockFileInfo(false)},
+			false,
+		},
+		{
+			"handleErr",
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("testdata.txt"),
+				fileUpdater: mockUpdateFile,
+				patterns:    errPatterns,
+			},
+			"ABC\nDEF\nGHI\n",
+			args{"testdata.txt", newMockFileInfo(false)},
+			true,
+		},
+		{
 			"dir",
-			&Fscrub{log: log, fileOpener: mockOpenFile("testdata", "")},
+			&Fscrub{log: log,
+				fileOpener:  mockOpenFile("testdata", ""),
+				fileWriter:  mockWriteFile("testdata"),
+				fileUpdater: mockUpdateFile,
+			},
+			"",
 			args{"testdata", newMockFileInfo(true)},
 			false,
 		},
 		{
 			"fileNotExist",
-			&Fscrub{log: log, fileOpener: mockOpenFile("notexist.txt", "")},
+			&Fscrub{log: log,
+				fileOpener:  mockOpenFile("notexist.txt", ""),
+				fileWriter:  mockWriteFile("notexist.txt"),
+				fileUpdater: mockUpdateFile,
+			},
+			"",
 			args{"notexist.txt", newMockFileInfo(false)},
 			true,
 		},
 		{
 			"fileNoPerm",
-			&Fscrub{log: log, fileOpener: mockOpenFile("noperm.txt", "")},
+			&Fscrub{log: log,
+				fileOpener:  mockOpenFile("noperm.txt", ""),
+				fileWriter:  mockWriteFile("noperm.txt"),
+				fileUpdater: mockUpdateFile,
+			},
+			"",
 			args{"noperm.txt", newMockFileInfo(false)},
 			true,
 		},
 		{
 			"fileTimeout",
-			&Fscrub{log: log, fileOpener: mockOpenFile("timeout.txt", "")},
+			&Fscrub{log: log,
+				fileOpener:  mockOpenFile("timeout.txt", ""),
+				fileWriter:  mockWriteFile("timeout.txt"),
+				fileUpdater: mockUpdateFile,
+			},
+			"",
 			args{"timeout.txt", newMockFileInfo(false)},
+			true,
+		},
+		{
+			"fileUndefErr",
+			&Fscrub{log: log,
+				fileOpener:  mockOpenFile("undefErr.txt", ""),
+				fileWriter:  mockWriteFile("undefErr.txt"),
+				fileUpdater: mockUpdateFile,
+			},
+			"",
+			args{"undefErr.txt", newMockFileInfo(false)},
+			true,
+		},
+		{
+			"failUpdate",
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("failupdate.txt"),
+				fileUpdater: mockUpdateFile,
+				patterns:    patterns,
+			},
+			"foo\nbar\nfoo\n",
+			args{"failupdate.txt", newMockFileInfo(false)},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.f.Handle(tt.args.path, tt.args.fileInfo); (err != nil) != tt.wantErr {
+			file, path, _ := createTempFile(tt.args.path, tt.content)
+			file.Close()
+			file, err := os.OpenFile(path, os.O_RDONLY, 0666)
+			if err != nil {
+				t.Errorf("Fscrub.UpdateFile() error = %v when opening file", err)
+			}
+			data, err := ioutil.ReadAll(file)
+			if err != nil {
+				t.Errorf("Fscrub.UpdateFile() error = %v when reading file", err)
+			}
+			if string(data) != tt.content {
+				t.Errorf("Fscrub.UpdateFile() newContent = %s, want %v", data, tt.content)
+			}
+
+			if err := tt.f.Handle(path, tt.args.fileInfo); (err != nil) != tt.wantErr {
 				t.Errorf("Fscrub.Handle() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -149,37 +258,69 @@ func TestFscrub_HandleLine(t *testing.T) {
 	}
 }
 
-// TODO: Solve problem where this won't test
-/*func TestFscrub_openFile(t *testing.T) {
+func TestFscrub_FileUpdater(t *testing.T) {
 	log := zap.NewNop()
 	tests := []struct {
 		name    string
 		f       *Fscrub
 		path    string
+		content string
 		wantErr bool
 	}{
 		{
 			"basic",
-			NewFscrub(log),
+			&Fscrub{log: log,
+				fileOpener: mockOpenFile("testdata.txt", "ABC\nDEF\nGHI\n"),
+				fileWriter: primitives.WriteFile(log),
+			},
 			"testdata.txt",
+			"foo\nbar\n",
 			false,
+		},
+		{
+			"fileNotExist",
+			&Fscrub{log: log,
+				fileOpener: mockOpenFile("notexist.txt", "foo"),
+				fileWriter: mockWriteFile("notexist.txt"),
+			},
+			"notexist.txt",
+			"sometempfile",
+			true,
+		},
+		{
+			"fileNoPerm",
+			&Fscrub{log: log,
+				fileOpener: mockOpenFile("noperm.txt", "foo"),
+				fileWriter: mockWriteFile("noperm.txt"),
+			},
+			"noperm.txt",
+			"sometempfile",
+			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			file, path, err := createTempFile(tt.path)
-			if err != nil {
-				t.Errorf("Fscrub.createTempFile() error = %v", err)
-			}
+
+			file, path, _ := createTempFile(tt.path)
 			file.Close()
-			_, err = tt.f.openFile(path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Fscrub.openFile() error = %v, wantErr %v", err, tt.wantErr)
-				return
+
+			if err := FileUpdater(tt.f)(path, tt.content); (err != nil) != tt.wantErr {
+				t.Errorf("Fscrub.FileUpdater() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			file, err := os.OpenFile(path, os.O_RDONLY, 0666)
+			if err != nil {
+				t.Errorf("Fscrub.FileUpdater() error = %v when opening file", err)
+			}
+			data, err := ioutil.ReadAll(file)
+			if err != nil {
+				t.Errorf("Fscrub.FileUpdater() error = %v when reading file", err)
+			}
+			if string(data) != tt.content {
+				t.Errorf("Fscrub.FileUpdater() newContent = %s, want %v", data, tt.content)
 			}
 		})
 	}
-}*/
+}
 
 type mockFileInfo struct {
 	dir bool
@@ -212,11 +353,14 @@ func newMockFileInfo(isDir bool) os.FileInfo {
 func mockOpenFile(path, content string) func(path string) (*os.File, error) {
 	byteSlice := []byte(content)
 	return func(path string) (*os.File, error) {
-		if path == "notexist.txt" {
+		if strings.Contains(path, "notexist.txt") {
 			return nil, os.ErrNotExist
 		}
-		if path == "noperm.txt" {
+		if strings.Contains(path, "noperm.txt") {
 			return nil, os.ErrPermission
+		}
+		if strings.Contains(path, "undefErr.txt") {
+			return nil, errors.New("undefErr")
 		}
 		file, _, err := createTempFile(path)
 
@@ -229,14 +373,45 @@ func mockOpenFile(path, content string) func(path string) (*os.File, error) {
 			fmt.Print(err)
 			return nil, err
 		}
-		if path == "timeout.txt" {
+		if strings.Contains(path, "timeout.txt") {
 			file.Close()
 		}
 		return file, nil
 	}
 }
 
-func createTempFile(path string) (*os.File, string, error) {
+func mockWriteFile(path string) func(path string, data []byte) error {
+	return func(path string, data []byte) error {
+		if strings.Contains(path, "notexist.txt") {
+			return os.ErrNotExist
+		}
+		if strings.Contains(path, "noperm.txt") {
+			return os.ErrPermission
+		}
+		file, tmpPath, err := createTempFile(path)
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		file.Close()
+		err = ioutil.WriteFile(tmpPath, data, 0666)
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		return nil
+	}
+}
+
+func mockUpdateFile(path, content string) error {
+	if strings.Contains(path, "failupdate.txt") {
+		return errors.New("update error")
+	}
+	return nil
+}
+
+func createTempFile(path string, content ...string) (*os.File, string, error) {
+
 	tmpDir, err := ioutil.TempDir("", "fscrubTests")
 	if err != nil {
 		return nil, "", err
@@ -248,5 +423,20 @@ func createTempFile(path string) (*os.File, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	return file, filepath.Join(tmpDir, fileName), nil
+	if len(content) > 0 {
+		_, err = file.Write([]byte(content[0]))
+
+	} else {
+		_, err = file.Write([]byte("sometempfile"))
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	err = file.Sync()
+	if err != nil {
+		fmt.Print(err)
+		return nil, "", err
+	}
+
+	return file, file.Name(), nil
 }

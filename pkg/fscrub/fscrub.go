@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/playnet-public/fscrub/pkg/primitives"
 	"go.uber.org/zap"
@@ -14,8 +15,10 @@ type Fscrub struct {
 	patterns []Pattern
 	dry      bool
 
-	log        *zap.Logger
-	fileOpener func(path string) (*os.File, error)
+	log         *zap.Logger
+	fileOpener  func(path string) (*os.File, error)
+	fileWriter  func(path string, data []byte) error
+	fileUpdater func(path, content string) error
 }
 
 // NewFscrub with logger
@@ -26,6 +29,8 @@ func NewFscrub(log *zap.Logger, dryrun bool, patterns ...Pattern) *Fscrub {
 		dry:      dryrun,
 	}
 	f.fileOpener = primitives.OpenFile(log)
+	f.fileWriter = primitives.WriteFile(log)
+	f.fileUpdater = FileUpdater(f)
 	return f
 }
 
@@ -51,52 +56,81 @@ func (f *Fscrub) Handle(path string, fileInfo os.FileInfo) error {
 		zap.String("file", fileInfo.Name()),
 	)
 
-	file, err := f.fileOpener(path)
-	defer file.Close()
-	if err != nil {
-		if os.IsNotExist(err) {
-			f.log.Error("file does not exist",
-				zap.String("file", path),
-				zap.Error(err))
-			return err
-		}
-		if os.IsPermission(err) {
-			f.log.Error("file permission denied",
-				zap.String("file", path),
-				zap.Error(err))
-			return err
-		}
-	}
-
+	changed := false
 	var newFile []string
-
-	f.log.Info("file scan started", zap.String("file", path))
-	scanner := bufio.NewScanner(file)
-	lineNo := 0
-	for scanner.Scan() {
-		line := Line{
-			Path:    path,
-			No:      lineNo,
-			Text:    scanner.Text(),
-			Changed: false,
-		}
-		new, err := f.HandleLine(line)
+	{
+		file, err := f.fileOpener(path)
+		defer file.Close()
 		if err != nil {
-			f.log.Error("failed handling line",
+			if os.IsNotExist(err) {
+				f.log.Error("file does not exist",
+					zap.String("file", path),
+					zap.Error(err))
+				return err
+			}
+			if os.IsPermission(err) {
+				f.log.Error("file permission denied",
+					zap.String("file", path),
+					zap.Error(err))
+				return err
+			}
+			f.log.Error("undefined file error",
 				zap.String("file", path),
-				zap.Int("line", lineNo), zap.String("text", line.Text))
+				zap.Error(err))
 			return err
 		}
-		line = new
-		lineNo = lineNo + 1
-		newFile = append(newFile, line.Text)
+
+		f.log.Info("file scan started", zap.String("file", path))
+		scanner := bufio.NewScanner(file)
+		lineNo := 0
+		for scanner.Scan() {
+			line := Line{
+				Path:    path,
+				No:      lineNo,
+				Text:    scanner.Text(),
+				Changed: false,
+			}
+			if line.Text == primitives.BuildIgnoreHeader() {
+				f.log.Info(
+					"skipping file",
+					zap.String("action", "fscrub"),
+					zap.String("path", path),
+					zap.String("reason", "skip-header"),
+				)
+				return nil
+			}
+			new, err := f.HandleLine(line)
+			if err != nil {
+				f.log.Error("failed handling line",
+					zap.String("file", path),
+					zap.Int("line", lineNo), zap.String("text", line.Text))
+				return err
+			}
+			if new.Changed {
+				changed = true
+				line = new
+			}
+			lineNo = lineNo + 1
+			newFile = append(newFile, line.Text)
+		}
+		err = scanner.Err()
+		if err == nil {
+			f.log.Info("file scan finished", zap.String("file", path))
+		} else {
+			f.log.Error("file scan failed", zap.String("file", path), zap.Error(err))
+			return err
+		}
 	}
-	err = scanner.Err()
-	if err == nil {
-		f.log.Info("file scan finished", zap.String("file", path))
-	} else {
-		f.log.Error("file scan failed", zap.String("file", path), zap.Error(err))
-		return err
+
+	if changed {
+		newFile = append(primitives.BuildHeader(), newFile...)
+		err := f.fileUpdater(path, strings.Join(newFile, "\n"))
+		if err != nil {
+			f.log.Error("updating file failed",
+				zap.String("file", path),
+				zap.Error(err))
+			return err
+		}
 	}
 
 	return nil
@@ -154,4 +188,20 @@ func (f *Fscrub) HandleLine(line Line) (Line, error) {
 		}
 	}
 	return line, nil
+}
+
+// FileUpdater returns update function for files
+func FileUpdater(f *Fscrub) func(path, content string) error {
+	return func(path, content string) error {
+		err := f.fileWriter(path, []byte(content))
+		if err == nil {
+			f.log.Info("updating file finished", zap.String("file", path))
+		} else {
+			f.log.Error("updating file failed",
+				zap.String("file", path),
+				zap.Error(err))
+			return err
+		}
+		return nil
+	}
 }
