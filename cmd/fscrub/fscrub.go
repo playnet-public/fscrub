@@ -108,7 +108,10 @@ func main() {
 
 func do(log *zap.Logger) error {
 	logAction := fslog.NewFsLogger(log)
-	fscrubAction := fscrub.NewFscrub(log)
+	patterns := []fscrub.Pattern{
+		{Type: "string", Source: "foo", Target: "bar"},
+	}
+	fscrubAction := fscrub.NewFscrub(log, false, patterns...)
 
 	actions := []model.Action{
 		logAction.Log,
