@@ -87,7 +87,7 @@ run: build
 	-v=2 -dir=./testdata/data -patterns=./testdata/config/patterns.json))
 
 # run specified tool from code
-dev: test
+dev:
 	@$(if $(TOOL),go run -ldflags ${KIT_VERSION} $(TOOLS_DIR)/$(TOOL)/*.go \
 	-logtostderr \
 	-v=4 -debug -dir=./testdata/data -patterns=./testdata/config/patterns.json, \
