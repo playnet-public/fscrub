@@ -20,12 +20,12 @@ func TestNewFscrub(t *testing.T) {
 	}{
 		{
 			"basic",
-			NewFscrub(log),
+			NewFscrub(log, true),
 			false,
 		},
 		{
 			"invalidFscrub",
-			&Fscrub{log, nil},
+			&Fscrub{log: log, fileOpener: nil},
 			true,
 		},
 	}
@@ -53,31 +53,31 @@ func TestFscrub_Handle(t *testing.T) {
 	}{
 		{
 			"basic",
-			&Fscrub{log, mockOpenFile("testdata.txt", "ABC\nDEF\nGHI\n")},
+			&Fscrub{log: log, fileOpener: mockOpenFile("testdata.txt", "ABC\nDEF\nGHI\n")},
 			args{"testdata.txt", newMockFileInfo(false)},
 			false,
 		},
 		{
 			"dir",
-			&Fscrub{log, mockOpenFile("testdata", "")},
+			&Fscrub{log: log, fileOpener: mockOpenFile("testdata", "")},
 			args{"testdata", newMockFileInfo(true)},
 			false,
 		},
 		{
 			"fileNotExist",
-			&Fscrub{log, mockOpenFile("notexist.txt", "")},
+			&Fscrub{log: log, fileOpener: mockOpenFile("notexist.txt", "")},
 			args{"notexist.txt", newMockFileInfo(false)},
 			true,
 		},
 		{
 			"fileNoPerm",
-			&Fscrub{log, mockOpenFile("noperm.txt", "")},
+			&Fscrub{log: log, fileOpener: mockOpenFile("noperm.txt", "")},
 			args{"noperm.txt", newMockFileInfo(false)},
 			true,
 		},
 		{
 			"fileTimeout",
-			&Fscrub{log, mockOpenFile("timeout.txt", "")},
+			&Fscrub{log: log, fileOpener: mockOpenFile("timeout.txt", "")},
 			args{"timeout.txt", newMockFileInfo(false)},
 			true,
 		},
@@ -93,34 +93,56 @@ func TestFscrub_Handle(t *testing.T) {
 
 func TestFscrub_HandleLine(t *testing.T) {
 	log := zap.NewNop()
-	type args struct {
-		path   string
-		lineNo int
-		line   string
+	patterns := []Pattern{
+		{pTypes.String, "foo", "bar"},
+	}
+	errPatterns := []Pattern{
+		{pTypes.Regex, "foo", "bar"},
 	}
 	tests := []struct {
 		name    string
 		f       *Fscrub
-		args    args
+		line    Line
 		want    string
 		wantErr bool
 	}{
 		{
 			"basic",
-			NewFscrub(log),
-			args{"testfile.txt", 0, "ABC"},
+			NewFscrub(log, true, patterns...),
+			Line{"testfile.txt", 0, "ABC", false},
 			"ABC",
 			false,
+		},
+		{
+			"findFoo",
+			NewFscrub(log, true, patterns...),
+			Line{"testfile.txt", 0, "foo", false},
+			"foo",
+			false,
+		},
+		{
+			"handleFoo",
+			NewFscrub(log, false, patterns...),
+			Line{"testfile.txt", 0, "foo", false},
+			"bar",
+			false,
+		},
+		{
+			"handleFooErr",
+			NewFscrub(log, false, errPatterns...),
+			Line{"testfile.txt", 0, "foo", false},
+			"foo",
+			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.f.HandleLine(tt.args.path, tt.args.lineNo, tt.args.line)
+			got, err := tt.f.HandleLine(tt.line)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Fscrub.HandleLine() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
+			if got.Text != tt.want {
 				t.Errorf("Fscrub.HandleLine() = %v, want %v", got, tt.want)
 			}
 		})

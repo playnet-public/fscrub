@@ -3,25 +3,29 @@ package fscrub
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/playnet-public/fscrub/pkg/primitives"
 	"go.uber.org/zap"
 )
 
 // Fscrub defines an action for scrubbing text files
 type Fscrub struct {
+	patterns []Pattern
+	dry      bool
+
 	log        *zap.Logger
 	fileOpener func(path string) (*os.File, error)
 }
 
 // NewFscrub with logger
-func NewFscrub(log *zap.Logger) *Fscrub {
+func NewFscrub(log *zap.Logger, dryrun bool, patterns ...Pattern) *Fscrub {
 	f := &Fscrub{
-		log: log,
+		patterns: patterns,
+		log:      log,
+		dry:      dryrun,
 	}
-	f.fileOpener = f.openFile
+	f.fileOpener = primitives.OpenFile(log)
 	return f
 }
 
@@ -51,29 +55,41 @@ func (f *Fscrub) Handle(path string, fileInfo os.FileInfo) error {
 	defer file.Close()
 	if err != nil {
 		if os.IsNotExist(err) {
-			f.log.Error("file does not exist", zap.String("file", path), zap.Error(err))
+			f.log.Error("file does not exist",
+				zap.String("file", path),
+				zap.Error(err))
 			return err
 		}
 		if os.IsPermission(err) {
-			f.log.Error("file permission denied", zap.String("file", path), zap.Error(err))
+			f.log.Error("file permission denied",
+				zap.String("file", path),
+				zap.Error(err))
 			return err
 		}
 	}
 
+	var newFile []string
+
 	f.log.Info("file scan started", zap.String("file", path))
 	scanner := bufio.NewScanner(file)
 	lineNo := 0
-	fmt.Println(scanner.Scan())
-	fmt.Println(scanner.Text())
 	for scanner.Scan() {
-		line := scanner.Text()
-		newLine, err := f.HandleLine(path, lineNo, line)
+		line := Line{
+			Path:    path,
+			No:      lineNo,
+			Text:    scanner.Text(),
+			Changed: false,
+		}
+		new, err := f.HandleLine(line)
 		if err != nil {
-			f.log.Error("failed handling line", zap.String("file", path), zap.Int("line", lineNo), zap.String("text", line))
+			f.log.Error("failed handling line",
+				zap.String("file", path),
+				zap.Int("line", lineNo), zap.String("text", line.Text))
 			return err
 		}
-		line = newLine
+		line = new
 		lineNo = lineNo + 1
+		newFile = append(newFile, line.Text)
 	}
 	err = scanner.Err()
 	if err == nil {
@@ -86,17 +102,56 @@ func (f *Fscrub) Handle(path string, fileInfo os.FileInfo) error {
 	return nil
 }
 
-// HandleLine and return new line or error
-func (f *Fscrub) HandleLine(path string, lineNo int, line string) (string, error) {
-	f.log.Debug("handling line", zap.String("file", path), zap.Int("line", lineNo), zap.String("text", line))
-	return line, nil
+// Line represents a line handled by Fscrub
+type Line struct {
+	Path    string
+	No      int
+	Text    string
+	Changed bool
 }
 
-func (f *Fscrub) openFile(path string) (*os.File, error) {
-	path, err := filepath.Abs(path)
-	if err != nil {
-		f.log.Error("could not get abs path", zap.String("file", path), zap.Error(err))
-		return nil, err
+// HandleLine and return new line or error
+func (f *Fscrub) HandleLine(line Line) (Line, error) {
+	//f.log.Debug("handling line",
+	//	zap.String("file", line.Path),
+	//	zap.Int("line", line.No),
+	//	zap.String("text", line.Text))
+
+	for _, p := range f.patterns {
+		count := p.Find(line.Text)
+		if count > 0 {
+			f.log.Info("found pattern",
+				zap.String("file", line.Path),
+				zap.Int("line", line.No),
+				zap.String("text", line.Text),
+				zap.String("type", p.Type.String()),
+				zap.String("pattern", p.Source),
+			)
+			f.log.Info("handling pattern",
+				zap.String("file", line.Path),
+				zap.Int("line", line.No),
+				zap.String("text", line.Text),
+				zap.String("type", p.Type.String()),
+				zap.String("pattern", p.Source),
+				zap.String("with", p.Target),
+			)
+			if !f.dry {
+				new, err := p.Handle(line.Text)
+				if err != nil {
+					f.log.Error("handling pattern failed",
+						zap.String("file", line.Path),
+						zap.Int("line", line.No),
+						zap.String("text", line.Text),
+						zap.String("type", p.Type.String()),
+						zap.String("pattern", p.Source),
+						zap.Error(err),
+					)
+					return line, err
+				}
+				line.Text = new
+				line.Changed = true
+			}
+		}
 	}
-	return os.OpenFile(path, os.O_RDWR, 0666)
+	return line, nil
 }
