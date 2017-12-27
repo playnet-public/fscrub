@@ -98,6 +98,18 @@ func TestFscrub_Handle(t *testing.T) {
 			false,
 		},
 		{
+			"headerSkip",
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("testdata.txt"),
+				fileUpdater: mockUpdateFile,
+				patterns:    patterns,
+			},
+			strings.Join(primitives.BuildHeader(), "\n"),
+			args{"testdata.txt", newMockFileInfo(false)},
+			false,
+		},
+		{
 			"handleErr",
 			&Fscrub{log: log,
 				fileOpener:  primitives.OpenFile(log),

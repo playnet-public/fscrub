@@ -99,6 +99,15 @@ func (f *Fscrub) Handle(path string, fileInfo os.FileInfo) error {
 				)
 				return nil
 			}
+			skipLine := false
+			for _, hl := range primitives.BuildHeader() {
+				if line.Text == hl {
+					skipLine = true
+				}
+			}
+			if skipLine {
+				continue
+			}
 			new, err := f.HandleLine(line)
 			if err != nil {
 				f.log.Error("failed handling line",
