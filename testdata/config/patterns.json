@@ -1,5 +1,5 @@
 {
     "patterns": [
-        {"type": "string", "source": "bla", "target": "blub"}
+        {"type": "string", "source": "foo", "target": "bar"}
     ]
 }
