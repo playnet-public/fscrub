@@ -81,19 +81,19 @@ full: test
 run: build
 	@$(if $(TOOL),./build/$(TOOL) \
 	-logtostderr \
-	-v=2 -dir=./pkg, \
+	-v=2 -dir=./testdata, \
 	$(if $(filter-out 1,$(SINGLE_TOOL)),, ./build/$(strip $(SUBDIRS)) \
 	-logtostderr \
-	-v=2 -dir=./pkg))
+	-v=2 -dir=./testdata))
 
 # run specified tool from code
 dev: test
 	@$(if $(TOOL),go run -ldflags ${KIT_VERSION} $(TOOLS_DIR)/$(TOOL)/*.go \
 	-logtostderr \
-	-v=4 -debug -dir=./pkg, \
+	-v=4 -debug -dir=./testdata, \
 	$(if $(filter-out 1,$(SINGLE_TOOL)),, go run -ldflags ${KIT_VERSION} $(TOOLS_DIR)/$(strip $(SUBDIRS))/*.go \
 	-logtostderr \
-	-v=4 -debug -dir=./pkg))
+	-v=4 -debug -dir=./testdata))
 
 # build the docker image
 docker: build-in-docker build-image
