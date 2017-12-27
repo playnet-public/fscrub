@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -33,6 +35,7 @@ var (
 	sentryDsn   = flag.String("sentrydsn", "", "sentry dsn key")
 	dbgPtr      = flag.Bool("debug", false, "debug printing")
 	versionPtr  = flag.Bool("version", true, "show or hide version info")
+	patternPtr  = flag.String("patterns", "", "path where additional patterns are stored")
 
 	dirs   model.Directories
 	sentry *raven.Client
@@ -108,8 +111,9 @@ func main() {
 
 func do(log *zap.Logger) error {
 	logAction := fslog.NewFsLogger(log)
-	patterns := []fscrub.Pattern{
-		{Type: "string", Source: "foo", Target: "bar"},
+	patterns, err := parsePatterns(*patternPtr)
+	if err != nil {
+		return err
 	}
 	fscrubAction := fscrub.NewFscrub(log, false, patterns...)
 
@@ -120,7 +124,7 @@ func do(log *zap.Logger) error {
 
 	crawler := fscrawl.NewCrawler(log, actions...)
 
-	fshandle := fshandle.NewFsHandler(
+	fshandler := fshandle.NewFsHandler(
 		dirs,
 		[]model.Handler{
 			crawler,
@@ -128,12 +132,27 @@ func do(log *zap.Logger) error {
 		log,
 	)
 
-	err := fshandle.Run()
+	err = fshandler.Run()
 	if err != nil {
 		return errors.Wrap(err, "running fscrub failed")
 	}
 
 	return nil
+}
+
+func parsePatterns(path string) ([]fscrub.Pattern, error) {
+	if path == "" {
+		return []fscrub.Pattern{}, nil
+	}
+	config := &fscrub.PatternConfig{}
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return []fscrub.Pattern{}, err
+	}
+	if err := json.Unmarshal(content, config); err != nil {
+		return []fscrub.Pattern{}, err
+	}
+	return config.Patterns, nil
 }
 
 //TODO: Move this to playnet common libs

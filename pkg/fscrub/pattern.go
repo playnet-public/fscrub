@@ -20,6 +20,11 @@ var pTypes = struct {
 	Regex:  "regex",
 }
 
+// PatternConfig defines the json containing patterns
+type PatternConfig struct {
+	Patterns []Pattern `json:"patterns"`
+}
+
 // Pattern defines a search and replace pattern
 type Pattern struct {
 	Type   patternType `json:"type"`
