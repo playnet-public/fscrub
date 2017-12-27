@@ -1,3 +1,4 @@
+//-ignore: github.com/playnet-public/fscrub
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Sed condimentum leo sit amet justo facilisis tempor.
 Curabitur a lectus vitae enim auctor gravida.
