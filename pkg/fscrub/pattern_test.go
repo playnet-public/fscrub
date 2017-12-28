@@ -4,22 +4,50 @@ import (
 	"testing"
 )
 
-func TestPatternType_String(t *testing.T) {
+// TODO: Find tests for reaching all errors
+func TestPatternConfig_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
-		name string
-		p    patternType
-		want string
+		name    string
+		c       *PatternConfig
+		b       []byte
+		wantErr bool
 	}{
 		{
 			"basic",
-			"test",
-			"test",
+			&PatternConfig{},
+			[]byte(`{
+				"patterns": [
+					{"type": "string", "source": "foo", "target": "bar"},
+					{"type": "regex", "exp": "t\\s\\*\\w+", "target": "f *foo"}
+				] 
+			}`),
+			false,
+		},
+		{
+			"unmErr",
+			&PatternConfig{},
+			[]byte(`.{
+				"patterns": [
+					{"type": "string", "source": "foo", "target": "bar"}
+				] 
+			}`),
+			true,
+		},
+		{
+			"unknownType",
+			&PatternConfig{},
+			[]byte(`{
+				"patterns": [
+					{"type": "foo", "source": "foo", "target": "bar"}
+				] 
+			}`),
+			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.p.String(); got != tt.want {
-				t.Errorf("Pattern.String() = %v, want %v", got, tt.want)
+			if err := tt.c.UnmarshalJSON(tt.b); (err != nil) != tt.wantErr {
+				t.Errorf("PatternConfig.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -27,39 +55,41 @@ func TestPatternType_String(t *testing.T) {
 
 func TestPattern_Find(t *testing.T) {
 	tests := []struct {
-		name string
-		p    *Pattern
-		s    string
-		want int
+		name    string
+		p       Pattern
+		s       string
+		want    int
+		wantErr bool
 	}{
 		{
 			"basicString",
-			&Pattern{Type: pTypes.String, Source: "foo", Target: "bar"},
+			NewStringPattern("foo", "bar"),
 			"abc",
 			0,
+			false,
 		},
 		{
 			"basicRegex",
-			&Pattern{Type: pTypes.Regex, Source: "foo", Target: "bar"},
+			NewRegexPattern("t\\s\\*\\w+", "f *foo"),
 			"abc",
 			1,
-		},
-		{
-			"unknownType",
-			&Pattern{Type: "unknown", Source: "foo", Target: "bar"},
-			"abc",
-			-1,
+			false,
 		},
 		{
 			"oneResult",
-			&Pattern{Type: pTypes.String, Source: "foo", Target: "bar"},
+			NewStringPattern("foo", "bar"),
 			"foo bar",
 			1,
+			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.p.Find(tt.s); got != tt.want {
+			got, err := tt.p.Find(tt.s)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Pattern.Find() = error %v, want %v", got, tt.wantErr)
+			}
+			if got != tt.want {
 				t.Errorf("Pattern.Find() = %v, want %v", got, tt.want)
 			}
 		})
@@ -69,35 +99,28 @@ func TestPattern_Find(t *testing.T) {
 func TestPattern_Handle(t *testing.T) {
 	tests := []struct {
 		name    string
-		p       *Pattern
+		p       Pattern
 		s       string
 		want    string
 		wantErr bool
 	}{
 		{
 			"basicString",
-			&Pattern{Type: pTypes.String, Source: "foo", Target: "bar"},
+			NewStringPattern("foo", "bar"),
 			"abc",
 			"abc",
 			false,
 		},
 		{
 			"basicRegex",
-			&Pattern{Type: pTypes.Regex, Source: "foo", Target: "bar"},
-			"abc",
-			"abc",
-			true,
-		},
-		{
-			"unknownType",
-			&Pattern{Type: "unknown", Source: "foo", Target: "bar"},
+			NewRegexPattern("t\\s\\*\\w+", "f *foo"),
 			"abc",
 			"abc",
 			true,
 		},
 		{
 			"oneResult",
-			&Pattern{Type: pTypes.String, Source: "foo", Target: "bar"},
+			NewStringPattern("foo", "bar"),
 			"foo bar",
 			"bar bar",
 			false,
@@ -112,6 +135,32 @@ func TestPattern_Handle(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("Pattern.Handle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewRegexPattern(t *testing.T) {
+	type args struct {
+		exp    string
+		target string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"basic", args{"t\\s(*\\w+", "bar"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pattern := NewRegexPattern(tt.args.exp, tt.args.target)
+			if _, err := pattern.Find(""); (err != nil) != tt.want {
+				t.Errorf("NewRegexPattern() = %v, want %v", err, tt.want)
+			}
+			pattern = NewRegexPattern(tt.args.exp, tt.args.target)
+			if _, err := pattern.Handle(""); (err != nil) != tt.want {
+				t.Errorf("NewRegexPattern() = %v, want %v", err, tt.want)
 			}
 		})
 	}
