@@ -1,6 +1,7 @@
 package fscrub
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -72,11 +73,18 @@ func TestPattern_Find(t *testing.T) {
 			"basicRegex",
 			NewRegexPattern("t\\s\\*\\w+", "f *foo"),
 			"abc",
+			0,
+			false,
+		},
+		{
+			"findRegex",
+			NewRegexPattern("t\\s\\*\\w+", "f *foo"),
+			"t *testing.T",
 			1,
 			false,
 		},
 		{
-			"oneResult",
+			"findString",
 			NewStringPattern("foo", "bar"),
 			"foo bar",
 			1,
@@ -116,10 +124,17 @@ func TestPattern_Handle(t *testing.T) {
 			NewRegexPattern("t\\s\\*\\w+", "f *foo"),
 			"abc",
 			"abc",
-			true,
+			false,
 		},
 		{
-			"oneResult",
+			"findRegex",
+			NewRegexPattern("t\\s\\*\\w+", "f *foo"),
+			"t *testing.T",
+			"f *foo.T",
+			false,
+		},
+		{
+			"findString",
 			NewStringPattern("foo", "bar"),
 			"foo bar",
 			"bar bar",
@@ -164,4 +179,32 @@ func TestNewRegexPattern(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockErrFindPattern struct{}
+
+func (p *mockErrFindPattern) Find(s string) (int, error) {
+	return 0, errors.New("test error")
+}
+
+func (p *mockErrFindPattern) Handle(s string) (string, error) {
+	return "", errors.New("test error")
+}
+
+func (p *mockErrFindPattern) String() string {
+	return ""
+}
+
+type mockErrHandlePattern struct{}
+
+func (p *mockErrHandlePattern) Find(s string) (int, error) {
+	return 1, nil
+}
+
+func (p *mockErrHandlePattern) Handle(s string) (string, error) {
+	return "", errors.New("test error")
+}
+
+func (p *mockErrHandlePattern) String() string {
+	return ""
 }

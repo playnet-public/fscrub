@@ -1,5 +1,6 @@
 {
     "patterns": [
-        {"type": "string", "source": "foo", "target": "bar"}
-    ]
+        {"type": "string", "source": "foo", "target": "bar"},
+        {"type": "regex", "exp": "t\\s\\*\\w+", "target": "f *foo"}
+    ] 
 }

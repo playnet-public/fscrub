@@ -123,7 +123,13 @@ func (p *RegexPattern) Find(s string) (int, error) {
 		}
 		p.Regex = regex
 	}
-	return 1, nil
+
+	find := p.Regex.FindAllString(s, -1)
+	if find == nil {
+		return 0, nil
+	}
+
+	return len(find), nil
 }
 
 // Handle returns the regexp handled with target
@@ -135,7 +141,9 @@ func (p *RegexPattern) Handle(s string) (string, error) {
 		}
 		p.Regex = regex
 	}
-	return s, errors.New("not implemented")
+
+	s = p.Regex.ReplaceAllString(s, p.Target)
+	return s, nil
 }
 
 // String gives a representation of the pattern for logging
