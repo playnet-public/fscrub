@@ -140,17 +140,17 @@ func do(log *zap.Logger) error {
 	return nil
 }
 
-func parsePatterns(path string) ([]fscrub.Pattern, error) {
+func parsePatterns(path string) (fscrub.Patterns, error) {
 	if path == "" {
-		return []fscrub.Pattern{}, nil
+		return fscrub.Patterns{}, nil
 	}
 	config := &fscrub.PatternConfig{}
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		return []fscrub.Pattern{}, err
+		return fscrub.Patterns{}, err
 	}
 	if err := json.Unmarshal(content, config); err != nil {
-		return []fscrub.Pattern{}, err
+		return fscrub.Patterns{}, err
 	}
 	return config.Patterns, nil
 }

@@ -45,11 +45,11 @@ func TestNewFscrub(t *testing.T) {
 // TODO: Fix coverage for file tests
 func TestFscrub_Handle(t *testing.T) {
 	log := zap.NewNop()
-	patterns := []Pattern{
-		{pTypes.String, "foo", "bar"},
+	patterns := Patterns{
+		&StringPattern{"foo", "bar"},
 	}
-	errPatterns := []Pattern{
-		{pTypes.Regex, "foo", "bar"},
+	errPatterns := Patterns{
+		&RegexPattern{"foo", nil, "bar"},
 	}
 	type args struct {
 		path     string
@@ -214,11 +214,12 @@ func TestFscrub_Handle(t *testing.T) {
 
 func TestFscrub_HandleLine(t *testing.T) {
 	log := zap.NewNop()
-	patterns := []Pattern{
-		{pTypes.String, "foo", "bar"},
+	patterns := Patterns{
+		&StringPattern{"foo", "bar"},
 	}
-	errPatterns := []Pattern{
-		{pTypes.Regex, "foo", "bar"},
+	errPatterns := Patterns{
+		NewRegexPattern("t\\s(*\\w+", "bar"),
+		&RegexPattern{"foo", nil, "bar"},
 	}
 	tests := []struct {
 		name    string

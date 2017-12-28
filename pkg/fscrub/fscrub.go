@@ -12,7 +12,7 @@ import (
 
 // Fscrub defines an action for scrubbing text files
 type Fscrub struct {
-	patterns []Pattern
+	patterns Patterns
 	dry      bool
 
 	log         *zap.Logger
@@ -112,7 +112,9 @@ func (f *Fscrub) Handle(path string, fileInfo os.FileInfo) error {
 			if err != nil {
 				f.log.Error("failed handling line",
 					zap.String("file", path),
-					zap.Int("line", lineNo), zap.String("text", line.Text))
+					zap.Int("line", lineNo),
+					zap.String("text", line.Text),
+					zap.Error(err))
 				return err
 			}
 			if new.Changed {
@@ -161,22 +163,29 @@ func (f *Fscrub) HandleLine(line Line) (Line, error) {
 	//	zap.String("text", line.Text))
 
 	for _, p := range f.patterns {
-		count := p.Find(line.Text)
+		count, err := p.Find(line.Text)
+		if err != nil {
+			f.log.Error("finding pattern failed",
+				zap.String("file", line.Path),
+				zap.Int("line", line.No),
+				zap.String("text", line.Text),
+				zap.String("pattern", p.String()),
+				zap.Error(err),
+			)
+			return line, err
+		}
 		if count > 0 {
 			f.log.Info("found pattern",
 				zap.String("file", line.Path),
 				zap.Int("line", line.No),
 				zap.String("text", line.Text),
-				zap.String("type", p.Type.String()),
-				zap.String("pattern", p.Source),
+				zap.String("pattern", p.String()),
 			)
 			f.log.Info("handling pattern",
 				zap.String("file", line.Path),
 				zap.Int("line", line.No),
 				zap.String("text", line.Text),
-				zap.String("type", p.Type.String()),
-				zap.String("pattern", p.Source),
-				zap.String("with", p.Target),
+				zap.String("pattern", p.String()),
 			)
 			if !f.dry {
 				new, err := p.Handle(line.Text)
@@ -185,8 +194,7 @@ func (f *Fscrub) HandleLine(line Line) (Line, error) {
 						zap.String("file", line.Path),
 						zap.Int("line", line.No),
 						zap.String("text", line.Text),
-						zap.String("type", p.Type.String()),
-						zap.String("pattern", p.Source),
+						zap.String("pattern", p.String()),
 						zap.Error(err),
 					)
 					return line, err
