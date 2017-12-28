@@ -49,7 +49,13 @@ func TestFscrub_Handle(t *testing.T) {
 		&StringPattern{"foo", "bar"},
 	}
 	errPatterns := Patterns{
-		&RegexPattern{"foo", nil, "bar"},
+		&RegexPattern{"t\\s(*\\w+", nil, "bar"},
+	}
+	errFindPatterns := Patterns{
+		&mockErrFindPattern{},
+	}
+	errHandlePatterns := Patterns{
+		&mockErrHandlePattern{},
 	}
 	type args struct {
 		path     string
@@ -116,6 +122,30 @@ func TestFscrub_Handle(t *testing.T) {
 				fileWriter:  mockWriteFile("testdata.txt"),
 				fileUpdater: mockUpdateFile,
 				patterns:    errPatterns,
+			},
+			"ABC\nDEF\nGHI\n",
+			args{"testdata.txt", newMockFileInfo(false)},
+			true,
+		},
+		{
+			"handleFindErr",
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("testdata.txt"),
+				fileUpdater: mockUpdateFile,
+				patterns:    errFindPatterns,
+			},
+			"ABC\nDEF\nGHI\n",
+			args{"testdata.txt", newMockFileInfo(false)},
+			true,
+		},
+		{
+			"handleHandleErr",
+			&Fscrub{log: log,
+				fileOpener:  primitives.OpenFile(log),
+				fileWriter:  mockWriteFile("testdata.txt"),
+				fileUpdater: mockUpdateFile,
+				patterns:    errHandlePatterns,
 			},
 			"ABC\nDEF\nGHI\n",
 			args{"testdata.txt", newMockFileInfo(false)},
