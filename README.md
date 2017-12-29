@@ -1,5 +1,9 @@
 # fscrub
 [![Go Report Card](https://goreportcard.com/badge/github.com/playnet-public/fscrub)](https://goreportcard.com/report/github.com/playnet-public/fscrub)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Build Status](https://travis-ci.org/playnet-public/fscrub.svg?branch=master)](https://travis-ci.org/playnet-public/fscrub)
+[![Docker Repository on Quay](https://quay.io/repository/playnet/fscrub/status "Docker Repository on Quay")](https://quay.io/repository/playnet/fscrub)
+[![Join Discord at https://discord.gg/dWZkR6R](https://img.shields.io/badge/style-join-green.svg?style=flat&label=Discord)](https://discord.gg/dWZkR6R)
 
 Tool watching and crawling the file-system for files containing sensitive information to clean them.
 
