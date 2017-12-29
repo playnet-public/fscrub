@@ -30,7 +30,7 @@ before_deploy:
 deploy:
   provider: releases
   api_key:
-    secure: "${GITHUB_TOKEN}"
+    secure: "$GITHUB_TOKEN"
   file: build/*
   skip_cleanup: true
   file_glob: true

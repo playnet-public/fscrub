@@ -6,4 +6,4 @@ LABEL versioning "simple"
 
 ADD ./build/ /
 
-CMD ["/template"]
+CMD ["/fscrub"]
