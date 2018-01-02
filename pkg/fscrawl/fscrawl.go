@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Crawler .
+// Crawler defines the dir crawling handler
 type Crawler struct {
 	log       *zap.Logger
 	interrupt chan bool

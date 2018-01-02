@@ -19,18 +19,27 @@ Aside from that, any community project is free to use it so their users and thei
 fscrub has several modus operandi:
 * watching a provided folder for file-system changes and acting on creation/change of files
 * crawling a provided folder for files of interest and acting on find
-* watching a provided folder for new changes while also crawling to ensure past changes are covered
+* [TODO] watching a provided folder for new changes while also crawling to ensure past changes are covered
+* [TODO] crawling a folder every x minutes (using internal cron)
 
-The actions fscrub is planed to take are:
+## Status
+For a detailed status and todo's please check our [project board](https://github.com/playnet-public/fscrub/projects/1) or the [issues](https://github.com/playnet-public/fscrub/issues).
+
+The actions fscrub is currently capable of are:
+* crawling multiple directories for files
+* watching multiple directories for file change and creation events
+* checking found files for patterns and replacing those findings
+* ignoring files with a certain header
+* adding an information header to modified files
+
+Further actions fscrub is planed to take are:
 * finding personal or security relevant data based on provided patterns and replacing them (ip's, passwords, hostnames, etc.)
 * checking files against virus check api's or antivir tools
-* replacing found data or files with scrubbed ones or deleting them
 * moving found files to a safe backup location
 * notifying a pool of users on certain events
 
 
 ## Dependencies
-
 This project has a pretty complex Makefile and therefore requires `make`.
 
 Go Version: 1.8
@@ -38,15 +47,28 @@ Go Version: 1.8
 Install all further requirements by running `make deps`
 
 ## Usage
+NOTE: At the moment, it is not possible to crawl and watch directories simultaneously. This is WIP.
 
+Crawl a directory for defined patterns
 ```
-fscrub -watch -crawl -dir=/var/www/attachments -bckdir=/var/www/backups/fscrub -patterns=/var/opt/fscrub/patterns.json
+fscrub -crawl -dir=./testdata/data -patterns=./testdata/config/patterns.json
+```
+
+Watch a directory for defined patterns
+```
+fscrub -watch -dir=./testdata/data -patterns=./testdata/config/patterns.json
 ```
 
 It is possible to provide multiple dirs to handle. To do so, simply use the `-dir` parameter multiple times:
 ```
 fscrub -dir=./pkg -dir=./cmd
 ```
+
+## Patterns
+Fscrub is planed to have several built-in patterns (like the intelligent IP scrubber), but it is still possible to inject additional patterns via a json config.
+Those patterns then get used just as the default ones.
+
+An example of such config can be found [here](./testdata/config/patterns.json).
 
 ## Development
 
