@@ -10,11 +10,12 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/playnet-public/fscrub/pkg/fscrub"
-
 	"github.com/playnet-public/fscrub/pkg/fscrawl"
+
+	"github.com/playnet-public/fscrub/pkg/fscrub"
+	"github.com/playnet-public/fscrub/pkg/fswatch"
+
 	"github.com/playnet-public/fscrub/pkg/fshandle"
-	"github.com/playnet-public/fscrub/pkg/fslog"
 
 	raven "github.com/getsentry/raven-go"
 	"github.com/golang/glog"
@@ -36,6 +37,9 @@ var (
 	dbgPtr      = flag.Bool("debug", false, "debug printing")
 	versionPtr  = flag.Bool("version", true, "show or hide version info")
 	patternPtr  = flag.String("patterns", "", "path where additional patterns are stored")
+
+	watchPtr = flag.Bool("watch", false, "watch the dirs specified")
+	crawlPtr = flag.Bool("crawl", false, "crawl the dirs specified (once)")
 
 	dirs   model.Directories
 	sentry *raven.Client
@@ -110,7 +114,7 @@ func main() {
 }
 
 func do(log *zap.Logger) error {
-	logAction := fslog.NewFsLogger(log)
+	//logAction := fslog.NewFsLogger(log)
 	patterns, err := parsePatterns(*patternPtr)
 	if err != nil {
 		return err
@@ -118,17 +122,25 @@ func do(log *zap.Logger) error {
 	fscrubAction := fscrub.NewFscrub(log, false, patterns...)
 
 	actions := []model.Action{
-		logAction.Log,
+		//logAction.Log,
 		fscrubAction.Handle,
 	}
 
-	crawler := fscrawl.NewCrawler(log, actions...)
+	handlers := []model.Handler{}
+	if *watchPtr {
+		handlers = append(handlers, fswatch.NewWatcher(log, actions...))
+	}
+	if *crawlPtr {
+		handlers = append(handlers, fscrawl.NewCrawler(log, actions...))
+	}
+
+	if len(handlers) < 1 {
+		log.Warn("no handlers defined")
+	}
 
 	fshandler := fshandle.NewFsHandler(
 		dirs,
-		[]model.Handler{
-			crawler,
-		},
+		handlers,
 		log,
 	)
 

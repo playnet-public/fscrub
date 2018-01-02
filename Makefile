@@ -90,10 +90,10 @@ run: build
 dev:
 	@$(if $(TOOL),go run -ldflags ${KIT_VERSION} $(TOOLS_DIR)/$(TOOL)/*.go \
 	-logtostderr \
-	-v=4 -debug -dir=./testdata/data -patterns=./testdata/config/patterns.json, \
+	-v=4 -debug -dir=./testdata/data -watch -patterns=./testdata/config/patterns.json, \
 	$(if $(filter-out 1,$(SINGLE_TOOL)),, go run -ldflags ${KIT_VERSION} $(TOOLS_DIR)/$(strip $(SUBDIRS))/*.go \
 	-logtostderr \
-	-v=4 -debug -dir=./testdata/data -patterns=./testdata/config/patterns.json))
+	-v=4 -debug -dir=./testdata/data -watch -patterns=./testdata/config/patterns.json))
 
 # build the docker image
 docker: build-in-docker build-image
