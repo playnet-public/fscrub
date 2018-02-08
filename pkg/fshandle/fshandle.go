@@ -1,6 +1,7 @@
 package fshandle
 
 import (
+	"github.com/playnet-public/libs/log"
 	"reflect"
 
 	"github.com/playnet-public/fscrub/pkg/model"
@@ -14,14 +15,14 @@ type FsHandler struct {
 	Dirs     model.Directories
 	Handlers []model.Handler
 
-	log *zap.Logger
+	log *log.Logger
 }
 
 // NewFsHandler creates a fscrub instance with defaults if necessary
 func NewFsHandler(
 	dirs model.Directories,
 	handlers []model.Handler,
-	log *zap.Logger,
+	log *log.Logger,
 ) *FsHandler {
 	if len(dirs) < 1 {
 		log.Error("invalid handler", zap.Error(errors.New("at least one dir required")))

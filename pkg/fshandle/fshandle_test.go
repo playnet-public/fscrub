@@ -8,16 +8,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/playnet-public/fscrub/pkg/fscrawl"
 	"github.com/playnet-public/fscrub/pkg/model"
-	"go.uber.org/zap"
+	"github.com/playnet-public/libs/log"
 )
 
 func TestFsHandler_New(t *testing.T) {
-	crawler := fscrawl.NewCrawler(zap.NewNop())
-	log := zap.NewNop()
+	crawler := fscrawl.NewCrawler(log.NewNop())
+	l := log.NewNop()
 	type args struct {
 		dirs     model.Directories
 		handlers []model.Handler
-		log      *zap.Logger
+		log      *log.Logger
 	}
 	tests := []struct {
 		name    string
@@ -26,22 +26,22 @@ func TestFsHandler_New(t *testing.T) {
 	}{
 		{
 			"basic",
-			args{model.Directories{"test"}, []model.Handler{nil, nil}, log},
+			args{model.Directories{"test"}, []model.Handler{nil, nil}, l},
 			false,
 		},
 		{
 			"withCrawler",
-			args{model.Directories{"test"}, []model.Handler{nil, crawler}, log},
+			args{model.Directories{"test"}, []model.Handler{nil, crawler}, l},
 			false,
 		},
 		{
 			"dirEmptyError",
-			args{model.Directories{}, []model.Handler{nil, nil}, log},
+			args{model.Directories{}, []model.Handler{nil, nil}, l},
 			true,
 		},
 		{
 			"dirNilError",
-			args{nil, []model.Handler{nil, nil}, log},
+			args{nil, []model.Handler{nil, nil}, l},
 			true,
 		},
 	}
@@ -56,7 +56,7 @@ func TestFsHandler_New(t *testing.T) {
 }
 
 func TestFsHandler_Run(t *testing.T) {
-	log := zap.NewNop()
+	log := log.NewNop()
 	tests := []struct {
 		name    string
 		f       *FsHandler

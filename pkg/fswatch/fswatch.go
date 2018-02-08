@@ -3,6 +3,8 @@ package fswatch
 import (
 	"os"
 
+	"github.com/playnet-public/libs/log"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/playnet-public/fscrub/pkg/model"
 	"go.uber.org/zap"
@@ -10,14 +12,14 @@ import (
 
 // Watcher defines the dir watching handler
 type Watcher struct {
-	log       *zap.Logger
+	log       *log.Logger
 	interrupt chan bool
 	actions   []model.Action
 	watcher   *fsnotify.Watcher
 }
 
 // NewWatcher with logger
-func NewWatcher(log *zap.Logger, actions ...model.Action) *Watcher {
+func NewWatcher(log *log.Logger, actions ...model.Action) *Watcher {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Error("error initializing fswatch", zap.Error(err))

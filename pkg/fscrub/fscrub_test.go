@@ -4,19 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/playnet-public/libs/log"
+
 	"github.com/playnet-public/fscrub/pkg/primitives"
-	"go.uber.org/zap"
 )
 
 func TestNewFscrub(t *testing.T) {
-	log := zap.NewNop()
+	log := log.NewNop()
 	tests := []struct {
 		name    string
 		fscrub  *Fscrub
@@ -44,7 +44,7 @@ func TestNewFscrub(t *testing.T) {
 
 // TODO: Fix coverage for file tests
 func TestFscrub_Handle(t *testing.T) {
-	log := zap.NewNop()
+	log := log.NewNop()
 	patterns := Patterns{
 		&StringPattern{"foo", "bar"},
 	}
@@ -243,7 +243,7 @@ func TestFscrub_Handle(t *testing.T) {
 }
 
 func TestFscrub_HandleLine(t *testing.T) {
-	log := zap.NewNop()
+	log := log.NewNop()
 	patterns := Patterns{
 		&StringPattern{"foo", "bar"},
 	}
@@ -302,7 +302,7 @@ func TestFscrub_HandleLine(t *testing.T) {
 }
 
 func TestFscrub_FileUpdater(t *testing.T) {
-	log := zap.NewNop()
+	log := log.NewNop()
 	tests := []struct {
 		name    string
 		f       *Fscrub
@@ -433,13 +433,13 @@ func mockWriteFile(path string) func(path string, data []byte) error {
 		}
 		file, tmpPath, err := createTempFile(path)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 			return err
 		}
 		file.Close()
 		err = ioutil.WriteFile(tmpPath, data, 0666)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 			return err
 		}
 		return nil

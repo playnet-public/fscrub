@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/playnet-public/fscrub/pkg/model"
-	"go.uber.org/zap"
+	"github.com/playnet-public/libs/log"
 )
 
 // TODO: Add tests for file system events
 func TestNewWatcher(t *testing.T) {
-	log := zap.NewNop()
+	log := log.NewNop()
 	tests := []struct {
 		name    string
 		actions []model.Action
@@ -81,7 +81,7 @@ func TestWatcher_handle(t *testing.T) {
 		{
 			"basic",
 			&Watcher{
-				log:     zap.NewNop(),
+				log:     log.NewNop(),
 				actions: []model.Action{model.NoOpAction},
 			},
 			"fswatch_test.go",
@@ -90,7 +90,7 @@ func TestWatcher_handle(t *testing.T) {
 		{
 			"fileErr",
 			&Watcher{
-				log:     zap.NewNop(),
+				log:     log.NewNop(),
 				actions: []model.Action{model.NoOpAction},
 			},
 			"",
@@ -99,7 +99,7 @@ func TestWatcher_handle(t *testing.T) {
 		{
 			"actionErr",
 			&Watcher{
-				log:     zap.NewNop(),
+				log:     log.NewNop(),
 				actions: []model.Action{errorAction},
 			},
 			"fswatch_test.go",

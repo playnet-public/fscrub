@@ -16,6 +16,7 @@ import (
 	"github.com/playnet-public/fscrub/pkg/fswatch"
 
 	"github.com/playnet-public/fscrub/pkg/fshandle"
+	"github.com/playnet-public/libs/log"
 
 	raven "github.com/getsentry/raven-go"
 	"github.com/golang/glog"
@@ -69,7 +70,7 @@ func main() {
 	}
 
 	// prepare zap logging
-	log := newLogger(*dbgPtr).With(zapFields...)
+	log := log.New(appKey, *sentryDsn, *dbgPtr).With(zapFields...)
 	defer log.Sync()
 	log.Info("preparing")
 
@@ -116,8 +117,8 @@ func main() {
 	log.Info("finished")
 }
 
-func do(log *zap.Logger) error {
-	//logAction := fslog.NewFsLogger(log)
+func do(log *log.Logger) error {
+	logAction := fslog.NewFsLogger(log)
 	patterns, err := parsePatterns(*patternPtr)
 	if err != nil {
 		return err
@@ -146,7 +147,9 @@ func do(log *zap.Logger) error {
 		handlers,
 		log,
 	)
-
+	for _, dir := range dirs {
+		log.Info("running for dirs", zap.String("dir", dir.String()))
+	}
 	err = fshandler.Run()
 	if err != nil {
 		return errors.Wrap(err, "running fscrub failed")
@@ -168,35 +171,4 @@ func parsePatterns(path string) (fscrub.Patterns, error) {
 		return fscrub.Patterns{}, err
 	}
 	return config.Patterns, nil
-}
-
-//TODO: Move this to playnet common libs
-func newLogger(dbg bool) *zap.Logger {
-	highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.ErrorLevel
-	})
-	lowPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl < zapcore.ErrorLevel
-	})
-
-	consoleDebugging := zapcore.Lock(os.Stdout)
-	consoleErrors := zapcore.Lock(os.Stderr)
-	consoleConfig := zap.NewDevelopmentEncoderConfig()
-	consoleEncoder := zapcore.NewConsoleEncoder(consoleConfig)
-	core := zapcore.NewTee(
-		zapcore.NewCore(consoleEncoder, consoleErrors, highPriority),
-		zapcore.NewCore(consoleEncoder, consoleDebugging, lowPriority),
-	)
-	logger := zap.New(core)
-	if dbg {
-		logger = logger.WithOptions(
-			zap.AddCaller(),
-			zap.AddStacktrace(zap.ErrorLevel),
-		)
-	} else {
-		logger = logger.WithOptions(
-			zap.AddStacktrace(zap.FatalLevel),
-		)
-	}
-	return logger
 }

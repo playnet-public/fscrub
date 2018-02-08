@@ -3,16 +3,18 @@ package fslog
 import (
 	"os"
 
+	"github.com/playnet-public/libs/log"
+
 	"go.uber.org/zap"
 )
 
 // FsLogger provides a logging action for the fshandler
 type FsLogger struct {
-	log *zap.Logger
+	log *log.Logger
 }
 
 // NewFsLogger with logger
-func NewFsLogger(log *zap.Logger) *FsLogger {
+func NewFsLogger(log *log.Logger) *FsLogger {
 	return &FsLogger{
 		log: log,
 	}

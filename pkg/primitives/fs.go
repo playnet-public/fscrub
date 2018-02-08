@@ -2,6 +2,7 @@ package primitives
 
 import (
 	"io/ioutil"
+	"github.com/playnet-public/libs/log"
 	"os"
 	"path/filepath"
 
@@ -9,7 +10,7 @@ import (
 )
 
 // OpenFile returns a primitive function for opening and reading files
-func OpenFile(log *zap.Logger) func(path string) (*os.File, error) {
+func OpenFile(log *log.Logger) func(path string) (*os.File, error) {
 	return func(path string) (*os.File, error) {
 		path, err := filepath.Abs(path)
 		if err != nil {
@@ -21,7 +22,7 @@ func OpenFile(log *zap.Logger) func(path string) (*os.File, error) {
 }
 
 // WriteFile returns a primitive function for writing files replacing their content
-func WriteFile(log *zap.Logger) func(path string, data []byte) error {
+func WriteFile(log *log.Logger) func(path string, data []byte) error {
 	return func(path string, data []byte) error {
 		path, err := filepath.Abs(path)
 		if err != nil {

@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/playnet-public/fscrub/pkg/model"
-	"go.uber.org/zap"
+	"github.com/playnet-public/libs/log"
 )
 
 func TestCrawler_Validate(t *testing.T) {
-	log := zap.NewNop()
+	l := log.NewNop()
 	type args struct {
-		log *zap.Logger
+		log *log.Logger
 	}
 	tests := []struct {
 		name    string
@@ -22,7 +22,7 @@ func TestCrawler_Validate(t *testing.T) {
 	}{
 		{
 			"basic",
-			args{log},
+			args{l},
 			false,
 		},
 		{
@@ -43,7 +43,7 @@ func TestCrawler_Validate(t *testing.T) {
 
 func TestCrawler_Run(t *testing.T) {
 
-	log := zap.NewNop()
+	log := log.NewNop()
 
 	tests := []struct {
 		name    string

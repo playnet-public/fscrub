@@ -2,6 +2,7 @@ package fscrawl
 
 import (
 	"errors"
+	"github.com/playnet-public/libs/log"
 	"os"
 	"path/filepath"
 
@@ -11,13 +12,13 @@ import (
 
 // Crawler defines the dir crawling handler
 type Crawler struct {
-	log       *zap.Logger
+	log       *log.Logger
 	interrupt chan bool
 	actions   []model.Action
 }
 
 // NewCrawler with logger
-func NewCrawler(log *zap.Logger, actions ...model.Action) *Crawler {
+func NewCrawler(log *log.Logger, actions ...model.Action) *Crawler {
 	if actions == nil {
 		actions = []model.Action{model.NoOpAction}
 	}

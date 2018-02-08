@@ -3,6 +3,7 @@ package fscrub
 import (
 	"bufio"
 	"errors"
+	"github.com/playnet-public/libs/log"
 	"os"
 	"strings"
 
@@ -15,14 +16,14 @@ type Fscrub struct {
 	patterns Patterns
 	dry      bool
 
-	log         *zap.Logger
+	log         *log.Logger
 	fileOpener  func(path string) (*os.File, error)
 	fileWriter  func(path string, data []byte) error
 	fileUpdater func(path, content string) error
 }
 
 // NewFscrub with logger
-func NewFscrub(log *zap.Logger, dryrun bool, patterns ...Pattern) *Fscrub {
+func NewFscrub(log *log.Logger, dryrun bool, patterns ...Pattern) *Fscrub {
 	f := &Fscrub{
 		patterns: patterns,
 		log:      log,
