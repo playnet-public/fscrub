@@ -33,7 +33,7 @@ const (
 
 var (
 	maxprocsPtr = flag.Int("maxprocs", runtime.NumCPU(), "max go procs")
-	sentryDsn   = flag.String("sentrydsn", "", "sentry dsn key")
+	sentryDsn   = flag.String("sentrydsn", "https://564bd8a481ac4c718f84fce6179c072b:8bec58cb567645089b5c7c3e8f48f4ae@sentry.play-net.org/5", "sentry dsn key")
 	dbgPtr      = flag.Bool("debug", false, "debug printing")
 	versionPtr  = flag.Bool("version", true, "show or hide version info")
 	patternPtr  = flag.String("patterns", "", "path where additional patterns are stored")
@@ -103,13 +103,16 @@ func main() {
 
 	// run main code
 	log.Info("starting")
-	raven.CapturePanicAndWait(func() {
+	sentryErr, sentryID := raven.CapturePanicAndWait(func() {
 		if err := do(log); err != nil {
 			log.Fatal("fatal error encountered", zap.Error(err))
 			raven.CaptureErrorAndWait(err, map[string]string{"isFinal": "true"})
 			errs <- err
 		}
 	}, nil)
+	if sentryErr != nil {
+		log.Fatal("panic encountered", zap.String("sentryID", sentryID), zap.Error(sentryErr.(error)))
+	}
 	log.Info("finished")
 }
 
