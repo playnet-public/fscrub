@@ -13,8 +13,8 @@ type Patterns []Pattern
 
 // Pattern .
 type Pattern interface {
-	Find(s string) (int, error)
-	Handle(s string) (string, error)
+	Find(s string, file string) (int, error)
+	Handle(s string, file string) (string, error)
 	String() string
 }
 
@@ -84,12 +84,12 @@ func NewStringPattern(src, target string) *StringPattern {
 }
 
 // Find returns how often the source was found in string
-func (p *StringPattern) Find(s string) (int, error) {
+func (p *StringPattern) Find(s string, file string) (int, error) {
 	return strings.Count(s, p.Source), nil
 }
 
 // Handle returns the string handled based pattern
-func (p *StringPattern) Handle(s string) (string, error) {
+func (p *StringPattern) Handle(s string, file string) (string, error) {
 	return strings.Replace(s, p.Source, p.Target, -1), nil
 }
 
@@ -115,7 +115,7 @@ func NewRegexPattern(exp, target string) *RegexPattern {
 }
 
 // Find returns how often the regexp was found in string
-func (p *RegexPattern) Find(s string) (int, error) {
+func (p *RegexPattern) Find(s string, file string) (int, error) {
 	if p.Regex == nil {
 		regex, err := regexp.Compile(p.RegexString)
 		if err != nil {
@@ -133,7 +133,7 @@ func (p *RegexPattern) Find(s string) (int, error) {
 }
 
 // Handle returns the regexp handled with target
-func (p *RegexPattern) Handle(s string) (string, error) {
+func (p *RegexPattern) Handle(s string, file string) (string, error) {
 	if p.Regex == nil {
 		regex, err := regexp.Compile(p.RegexString)
 		if err != nil {

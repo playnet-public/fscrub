@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/playnet-public/fscrub/pkg/fscrub/patterns/intelligentIP"
+
 	"github.com/playnet-public/fscrub/pkg/fscrawl"
 
 	"github.com/playnet-public/fscrub/pkg/fscrub"
@@ -123,6 +125,8 @@ func do(log *log.Logger) error {
 	if err != nil {
 		return err
 	}
+	iip := intelligentIP.New()
+	patterns = append(patterns, iip)
 	fscrubAction := fscrub.NewFscrub(log, false, patterns...)
 
 	actions := []model.Action{

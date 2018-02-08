@@ -93,7 +93,7 @@ func TestPattern_Find(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.p.Find(tt.s)
+			got, err := tt.p.Find(tt.s, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Pattern.Find() = error %v, want %v", got, tt.wantErr)
 			}
@@ -143,7 +143,7 @@ func TestPattern_Handle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.p.Handle(tt.s)
+			got, err := tt.p.Handle(tt.s, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Pattern.Handle() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -170,11 +170,11 @@ func TestNewRegexPattern(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pattern := NewRegexPattern(tt.args.exp, tt.args.target)
-			if _, err := pattern.Find(""); (err != nil) != tt.want {
+			if _, err := pattern.Find("", ""); (err != nil) != tt.want {
 				t.Errorf("NewRegexPattern() = %v, want %v", err, tt.want)
 			}
 			pattern = NewRegexPattern(tt.args.exp, tt.args.target)
-			if _, err := pattern.Handle(""); (err != nil) != tt.want {
+			if _, err := pattern.Handle("", ""); (err != nil) != tt.want {
 				t.Errorf("NewRegexPattern() = %v, want %v", err, tt.want)
 			}
 		})
@@ -183,11 +183,11 @@ func TestNewRegexPattern(t *testing.T) {
 
 type mockErrFindPattern struct{}
 
-func (p *mockErrFindPattern) Find(s string) (int, error) {
+func (p *mockErrFindPattern) Find(s, f string) (int, error) {
 	return 0, errors.New("test error")
 }
 
-func (p *mockErrFindPattern) Handle(s string) (string, error) {
+func (p *mockErrFindPattern) Handle(s, f string) (string, error) {
 	return "", errors.New("test error")
 }
 
@@ -197,11 +197,11 @@ func (p *mockErrFindPattern) String() string {
 
 type mockErrHandlePattern struct{}
 
-func (p *mockErrHandlePattern) Find(s string) (int, error) {
+func (p *mockErrHandlePattern) Find(s, f string) (int, error) {
 	return 1, nil
 }
 
-func (p *mockErrHandlePattern) Handle(s string) (string, error) {
+func (p *mockErrHandlePattern) Handle(s, f string) (string, error) {
 	return "", errors.New("test error")
 }
 

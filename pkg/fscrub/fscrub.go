@@ -164,7 +164,7 @@ func (f *Fscrub) HandleLine(line Line) (Line, error) {
 	//	zap.String("text", line.Text))
 
 	for _, p := range f.patterns {
-		count, err := p.Find(line.Text)
+		count, err := p.Find(line.Text, line.Path)
 		if err != nil {
 			f.log.Error("finding pattern failed",
 				zap.String("file", line.Path),
@@ -189,7 +189,7 @@ func (f *Fscrub) HandleLine(line Line) (Line, error) {
 				zap.String("pattern", p.String()),
 			)
 			if !f.dry {
-				new, err := p.Handle(line.Text)
+				new, err := p.Handle(line.Text, line.Path)
 				if err != nil {
 					f.log.Error("handling pattern failed",
 						zap.String("file", line.Path),
