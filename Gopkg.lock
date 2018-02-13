@@ -63,7 +63,7 @@
   branch = "master"
   name = "github.com/playnet-public/libs"
   packages = ["log"]
-  revision = "3767150b0c13fcede956b97f190082e5f9b9e4df"
+  revision = "a5c24fbd4906e01f7d97ffe22eeee5f1783fc604"
 
 [[projects]]
   name = "github.com/uber/jaeger-client-go"

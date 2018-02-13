@@ -30,6 +30,12 @@ func (log *Logger) Close() {
 	log.closer.Close()
 }
 
+// WithFields wrapper around zap.With
+func (log *Logger) WithFields(fields ...zapcore.Field) *Logger {
+	log.Logger = log.Logger.With(fields...)
+	return log
+}
+
 // New Logger including sentry and jaeger
 func New(name, dsn string, dbg bool) *Logger {
 	highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
@@ -97,6 +103,36 @@ func New(name, dsn string, dbg bool) *Logger {
 	return log
 }
 
+// NewNop returns Logger doing nothing
+func NewNop() *Logger {
+	sentry, err := raven.New("")
+	if err != nil {
+		panic(err)
+	}
+
+	logger := zap.NewNop()
+	cfg := config.Configuration{}
+
+	jMetricsFactory := metrics.NullFactory
+
+	tracer, closer, err := cfg.New(
+		"nop",
+		config.Logger(jaegerzap.NewLogger(logger)),
+		config.Metrics(jMetricsFactory),
+	)
+	if err != nil {
+		panic(fmt.Sprintf("cannot init jaeger: %v\n", err))
+	}
+	log := &Logger{
+		Logger: logger,
+		Sentry: sentry,
+		closer: closer,
+		Tracer: tracer,
+	}
+
+	return log
+}
+
 // NewSentryEncoder with dsn
 func NewSentryEncoder(client *raven.Client) zapcore.Encoder {
 	return newSentryEncoder(client)
@@ -145,4 +181,13 @@ func (s *sentryEncoder) EncodeEntry(e zapcore.Entry, fields []zapcore.Field) (*b
 		s.Sentry.CaptureError(errors.Wrap(err, e.Message), tags)
 	}
 	return buf, nil
+}
+
+func (s *sentryEncoder) AddString(key, val string) {
+	tags := s.Sentry.Tags
+	if tags == nil {
+		tags = make(map[string]string)
+	}
+	tags[key] = val
+	s.Sentry.SetTagsContext(tags)
 }

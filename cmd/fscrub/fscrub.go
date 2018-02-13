@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// prepare zap logging
-	log := log.New(appKey, *sentryDsn, *dbgPtr).With(zapFields...)
+	log := log.New(appKey, *sentryDsn, *dbgPtr).WithFields(zapFields...)
 	defer log.Sync()
 	log.Info("preparing")
 
@@ -120,7 +120,7 @@ func main() {
 }
 
 func do(log *log.Logger) error {
-	logAction := fslog.NewFsLogger(log)
+	//logAction := fslog.NewFsLogger(log)
 	patterns, err := parsePatterns(*patternPtr)
 	if err != nil {
 		return err
