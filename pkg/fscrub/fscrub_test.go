@@ -434,13 +434,11 @@ func mockWriteFile(path string) func(path string, data []byte) error {
 		file, tmpPath, err := createTempFile(path)
 		if err != nil {
 			panic(err)
-			return err
 		}
 		file.Close()
 		err = ioutil.WriteFile(tmpPath, data, 0666)
 		if err != nil {
 			panic(err)
-			return err
 		}
 		return nil
 	}
